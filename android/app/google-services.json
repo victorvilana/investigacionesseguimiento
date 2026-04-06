@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "184596603012",
+    "project_id": "seguimientotesis-4df0c",
+    "storage_bucket": "seguimientotesis-4df0c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184596603012:android:103d7227de11e2034a62d1",
+        "android_client_info": {
+          "package_name": "victorvilanadev.com.example.investigacionesseguimiento"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184596603012-a1igs5pgr9ijfl67s98h2fbgrn2o8l1f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "victorvilanadev.com.example.investigacionesseguimiento",
+            "certificate_hash": "5217b34f26da0e3b5c4050d627dcfcb4beb37905"
+          }
+        },
+        {
+          "client_id": "184596603012-8eolkkjrdu5envhk8vhvkffhsd92du06.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMazA--ozB6DgOmRw5rGvTjTIuVpfZRcI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184596603012-8eolkkjrdu5envhk8vhvkffhsd92du06.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

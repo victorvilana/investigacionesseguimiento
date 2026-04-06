@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../infrastructure/services/AuthService.dart';
+import '../layouts/main_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,8 +10,82 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool _isObscure = true;
+  // --- VARIABLES DE ESTADO Y FIREBASE ---
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
+  bool _isObscure = true;
+  bool _isLoading = false;
+
+  final AuthService _authService = AuthService();
+
+  // --- LÓGICA DE INICIO DE SESIÓN ---
+  Future<void> _iniciarSesion() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final String? error = await _authService.login(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+
+      if (error == null) {
+        // ÉXITO
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayout()),
+        );
+      } else {
+        // ERROR
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  // --- LÓGICA DE GOOGLE ---
+  Future<void> _continuarConGoogle() async {
+    setState(() => _isLoading = true);
+
+    final String? error = await _authService.signInWithGoogle();
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+
+      if (error == null) {
+        // ÉXITO: Navegamos al Dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayout()),
+        );
+      } else if (error != 'Inicio de sesión cancelado') {
+        // ERROR: Mostramos SnackBar (solo si no fue una cancelación manual)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red.shade800),
+        );
+      }
+    }
+  }
+
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // --- CONSTRUCCIÓN PRINCIPAL ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,9 +106,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // --- DISEÑO VERSIÓN WEB ---
   Widget _buildWebLayout(BoxConstraints constraints) {
     return Center(
-      child: Container( // Quitamos el SingleChildScrollView de afuera para que el fondo no se mueva
+      child: Container(
         width: 1050,
-        height: 680, // Subimos un poco la altura de 650 a 680 para dar aire
+        height: 680,
         margin: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -41,17 +117,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Row(
           children: [
-            // Banner Azul Izquierdo (Se mantiene igual)
+            // Banner Azul Izquierdo (Mantenido intacto)
             Expanded(
               flex: 5,
               child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1046C4),
-                  borderRadius: const BorderRadius.only(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1046C4),
+                  borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(40),
                       bottomLeft: Radius.circular(40)
                   ),
-                  image: const DecorationImage(
+                  image: DecorationImage(
                     image: NetworkImage('https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070'),
                     fit: BoxFit.cover,
                     opacity: 0.3,
@@ -72,10 +148,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            // Formulario Derecho (Aquí añadimos el Scroll)
+            // Formulario Derecho
             Expanded(
               flex: 6,
-              child: ClipRRect( // Para que el scroll no se salga de las esquinas redondeadas
+              child: ClipRRect(
                 borderRadius: const BorderRadius.only(topRight: Radius.circular(40), bottomRight: Radius.circular(40)),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(60),
@@ -115,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 15),
               const Text("Bienvenido de nuevo. Acceda a su panel de gestión académica.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 16)),
               const SizedBox(height: 50),
-              _buildLoginForm(isWeb: false),
+              _buildLoginForm(isWeb: false), //
               const SizedBox(height: 40),
               const Text("© 2024 SISTEMA DE SEGUIMIENTO DE INVESTIGACIONES", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
             ],
@@ -125,95 +201,115 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- FORMULARIO COMÚN ---
+  // --- FORMULARIO COMÚN (AHORA CON LÓGICA) ---
   Widget _buildLoginForm({required bool isWeb}) {
-    return Column(
-      crossAxisAlignment: isWeb ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-      children: [
-        if (isWeb) ...[
-          const Text("Bienvenido", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-          const Text("Ingrese sus credenciales de investigador.", style: TextStyle(color: Colors.grey)),
-          const SizedBox(height: 40),
-        ],
-        _label("EMAIL INSTITUCIONAL"),
-        _inputField(Icons.email_outlined, "usuario@institucion.edu"),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _label("CONTRASEÑA"),
-            if (!isWeb) TextButton(onPressed: () {}, child: const Text("¿Olvidó su contraseña?", style: TextStyle(fontSize: 12))),
+    // Envolvemos tu Column en un Form para la validación
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: isWeb ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          if (isWeb) ...[
+            const Text("Bienvenido", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+            const Text("Ingrese sus credenciales de investigador.", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 40),
           ],
-        ),
-        _passwordField(),
-        if (isWeb) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () {}, child: const Text("¿Olvidó su contraseña?"))),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1046C4),
-            minimumSize: const Size(double.infinity, 55),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            elevation: 2,
-          ),
-          child: const Text("Iniciar Sesión", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 25),
-        Row(
-          children: const [
-            Expanded(child: Divider()),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text("O CONTINUAR CON", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold))),
-            Expanded(child: Divider()),
-          ],
-        ),
-        const SizedBox(height: 25),
-        OutlinedButton.icon(
-          onPressed: () {},
-          icon: Image.network('https://tinyurl.com/google-logo-png-web', height: 20, errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.red)),
-          label: const Text("Continuar con Google", style: TextStyle(color: Colors.black87)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 55),
-            shape: const StadiumBorder(),
-            backgroundColor: isWeb ? Colors.transparent : const Color(0xFFF1F3F9),
-            side: isWeb ? const BorderSide(color: Colors.black12) : BorderSide.none,
-          ),
-        ),
-        const SizedBox(height: 30),
-        Center(
-          child: Text.rich(TextSpan(
-            text: "¿Es nuevo en el sistema? ",
-            style: const TextStyle(color: Colors.black54),
+
+          _label("EMAIL INSTITUCIONAL"),
+          _inputField(Icons.email_outlined, "usuario@institucion.edu", _emailController, false),
+          const SizedBox(height: 20),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextSpan(text: "Cree una cuenta académica", style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold)),
+              _label("CONTRASEÑA"),
+              if (!isWeb) TextButton(onPressed: () {}, child: const Text("¿Olvidó su contraseña?", style: TextStyle(fontSize: 12))),
             ],
-          )),
-        ),
-      ],
+          ),
+
+          _inputField(Icons.lock_outline, "••••••••", _passwordController, true),
+
+          if (isWeb) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () {}, child: const Text("¿Olvidó su contraseña?"))),
+          const SizedBox(height: 30),
+
+          // BOTÓN INICIAR SESIÓN ACTUALIZADO
+          ElevatedButton(
+            onPressed: _isLoading ? null : _iniciarSesion,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1046C4),
+              minimumSize: const Size(double.infinity, 55),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              elevation: 2,
+              disabledBackgroundColor: const Color(0xFF1046C4).withOpacity(0.6),
+            ),
+            child: _isLoading
+                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                : const Text("Iniciar Sesión", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+
+          const SizedBox(height: 25),
+          const Row(
+            children: [
+              Expanded(child: Divider()),
+              Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text("O CONTINUAR CON", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold))),
+              Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 25),
+
+          OutlinedButton.icon(
+            // Si está cargando, desactivamos el botón
+            onPressed: _isLoading ? null : _continuarConGoogle,
+            icon: _isLoading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Image.network(
+                'https://tinyurl.com/google-logo-png-web',
+                height: 20,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.red)
+            ),
+            label: Text(
+                _isLoading ? "Cargando..." : "Continuar con Google",
+                style: const TextStyle(color: Colors.black87)
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 55),
+              shape: const StadiumBorder(),
+              backgroundColor: isWeb ? Colors.transparent : const Color(0xFFF1F3F9),
+              side: isWeb ? const BorderSide(color: Colors.black12) : BorderSide.none,
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          Center(
+            child: Text.rich(TextSpan(
+              text: "¿Es nuevo en el sistema? ",
+              style: const TextStyle(color: Colors.black54),
+              children: [
+                TextSpan(text: "Cree una cuenta académica", style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold)),
+              ],
+            )),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _label(String text) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)));
 
-  Widget _inputField(IconData icon, String hint) {
-    return TextField(
+  // Hemos combinado tu inputField y passwordField en uno solo que usa TextFormField
+  Widget _inputField(IconData icon, String hint, TextEditingController controller, bool isPassword) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword ? _isObscure : false,
+      validator: (value) => value == null || value.isEmpty ? 'Este campo es requerido' : null,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, size: 20),
+        suffixIcon: isPassword
+            ? IconButton(icon: Icon(_isObscure ? Icons.visibility : Icons.visibility_off, size: 20), onPressed: () => setState(() => _isObscure = !_isObscure))
+            : null,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFF5F7FF),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-      ),
-    );
-  }
-
-  Widget _passwordField() {
-    return TextField(
-      obscureText: _isObscure,
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.lock_outline, size: 20),
-        suffixIcon: IconButton(icon: Icon(_isObscure ? Icons.visibility : Icons.visibility_off, size: 20), onPressed: () => setState(() => _isObscure = !_isObscure)),
-        filled: true,
-        fillColor: const Color(0xFFF5F7FF),
+        fillColor: const Color(0xFFF5F7FF), //
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
       ),
     );

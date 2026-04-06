@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:investigacionesseguimiento/presentation/screens/CargarTrabajoScreen.dart';
+import '../../infrastructure/services/AuthService.dart';
+
 
 import '../screens/DashboardScreen.dart';
+import '../screens/LoginScreen.dart';
 import '../screens/EstadisticasScreen.dart';
 import '../screens/SeguimientoScreen.dart';
 
@@ -15,6 +18,25 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
+
+
+  // 1. Instanciamos el servicio
+  final AuthService _authService = AuthService();
+
+  // 2. Creamos la función de cierre de sesión
+  Future<void> _cerrarSesion() async {
+    // Cerramos la sesión en Firebase
+    await _authService.logout();
+
+    // Si el widget sigue activo en pantalla, navegamos al Login
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
 
   final List<Widget> _pages = [
     const DashboardScreen(),
@@ -69,7 +91,15 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _sidebarItem(int index, IconData icon, String label, {bool isExit = false}) {
     bool active = _currentIndex == index;
     return InkWell(
-      onTap: () => index == -1 ? null : setState(() => _currentIndex = index),
+      onTap: () {
+        if (isExit) {
+          // Si es el botón de salir, llamamos a Firebase
+          _cerrarSesion();
+        } else if (index != -1) {
+          // Si es otro botón, cambiamos de pantalla
+          setState(() => _currentIndex = index);
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -88,6 +118,7 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
+
   Widget _buildBottomNav() {
     return BottomNavigationBar(
       currentIndex: _currentIndex,
@@ -96,10 +127,12 @@ class _MainLayoutState extends State<MainLayout> {
       unselectedItemColor: Colors.grey,
       type: BottomNavigationBarType.fixed,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "INICIO"),
-        BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "CARGAR"),
-        BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), label: "SEGUIMIENTO"),
-        BottomNavigationBarItem(icon: Icon(Icons.auto_graph), label: "ESTADÍSTICAS"),
+        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Inicio"),
+        BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "Cargar"),
+        BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), label: "Seguimiento"),
+        BottomNavigationBarItem(icon: Icon(Icons.auto_graph), label: "Estadísticas"),
+        BottomNavigationBarItem(icon: Icon(Icons.exit_to_app), label: "Salir"),
+
       ],
     );
   }
