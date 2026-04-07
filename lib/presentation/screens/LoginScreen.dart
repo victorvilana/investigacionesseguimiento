@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../infrastructure/services/AuthService.dart';
-import '../layouts/main_layout.dart';
+import '../layouts/MainLayout.dart';
+import 'DashboardScreen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // ÉXITO
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainLayout()),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       } else {
         // ERROR
