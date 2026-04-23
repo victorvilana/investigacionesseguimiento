@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../infrastructure/services/AuthService.dart';
 import '../layouts/MainLayout.dart';
-import 'DashboardScreen.dart';
+import '../controllers/LoginController.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,96 +11,74 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // --- VARIABLES DE ESTADO Y FIREBASE ---
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  // 👉 1. Instanciamos el Controlador (El Cerebro)
+  late final LoginController _controller;
 
-  bool _isObscure = true;
-  bool _isLoading = false;
-
-  final AuthService _authService = AuthService();
-
-  // --- LÓGICA DE INICIO DE SESIÓN ---
-  Future<void> _iniciarSesion() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    final String? error = await _authService.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      if (error == null) {
-        // ÉXITO
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      } else {
-        // ERROR
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: Colors.red.shade800,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _controller = LoginController();
   }
-
-  // --- LÓGICA DE GOOGLE ---
-  Future<void> _continuarConGoogle() async {
-    setState(() => _isLoading = true);
-
-    final String? error = await _authService.signInWithGoogle();
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      if (error == null) {
-        // ÉXITO: Navegamos al Dashboard
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainLayout()),
-        );
-      } else if (error != 'Inicio de sesión cancelado') {
-        // ERROR: Mostramos SnackBar (solo si no fue una cancelación manual)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red.shade800),
-        );
-      }
-    }
-  }
-
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  // --- MÉTODOS DE NAVEGACIÓN Y ALERTAS ---
+  Future<void> _ejecutarLogin() async {
+    final error = await _controller.iniciarSesion();
+    _procesarResultado(error);
+  }
+
+  Future<void> _ejecutarGoogleLogin() async {
+    final error = await _controller.continuarConGoogle();
+    if (error == 'Inicio de sesión cancelado') return; // Ignoramos si el usuario canceló
+    _procesarResultado(error);
+  }
+
+  void _procesarResultado(String? error) {
+    if (!mounted) return;
+
+    if (error == null) {
+      // ÉXITO: Navegamos al layout principal
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainLayout()),
+      );
+    } else if (error != "Formulario inválido") {
+      // ERROR: Mostramos SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red.shade800,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // --- CONSTRUCCIÓN PRINCIPAL ---
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F9),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // Si el ancho es mayor a 800, mostramos diseño Web, si no, Móvil
-          if (constraints.maxWidth > 800) {
-            return _buildWebLayout(constraints);
-          } else {
-            return _buildMobileLayout(constraints);
-          }
-        },
-      ),
+    // 👉 2. Envolvemos la pantalla en un ListenableBuilder para que escuche al controlador
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF3F4F9),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 800) {
+                return _buildWebLayout(constraints);
+              } else {
+                return _buildMobileLayout(constraints);
+              }
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -118,16 +96,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: Row(
           children: [
-            // Banner Azul Izquierdo (Mantenido intacto)
             Expanded(
               flex: 5,
               child: Container(
                 decoration: const BoxDecoration(
                   color: Color(0xFF1046C4),
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      bottomLeft: Radius.circular(40)
-                  ),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(40), bottomLeft: Radius.circular(40)),
                   image: DecorationImage(
                     image: NetworkImage('https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070'),
                     fit: BoxFit.cover,
@@ -143,13 +117,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: 20),
                     Text("Seguimiento de investigaciones", style: TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.bold, height: 1.1)),
                     SizedBox(height: 20),
-                    Text("Centralice su producción científica con precisión editorial y rigor analítico.", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    Text("Centralice la gestión de las investigaciones en un solo lugar.", style: TextStyle(color: Colors.white70, fontSize: 16)),
                   ],
                 ),
               ),
             ),
-
-            // Formulario Derecho
             Expanded(
               flex: 6,
               child: ClipRRect(
@@ -171,28 +143,20 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF8F9FD), Colors.white],
-        ),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF8F9FD), Colors.white]),
       ),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
           child: Column(
             children: [
-              const CircleAvatar(
-                radius: 30,
-                backgroundColor: Color(0xFFE8EAF6),
-                child: Icon(Icons.menu_book_rounded, color: Color(0xFF1046C4), size: 30),
-              ),
+              const CircleAvatar(radius: 30, backgroundColor: Color(0xFFE8EAF6), child: Icon(Icons.menu_book_rounded, color: Color(0xFF1046C4), size: 30)),
               const SizedBox(height: 30),
               const Text("Seguimiento de investigaciones", textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
               const SizedBox(height: 15),
               const Text("Bienvenido de nuevo. Acceda a su panel de gestión académica.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 16)),
               const SizedBox(height: 50),
-              _buildLoginForm(isWeb: false), //
+              _buildLoginForm(isWeb: false),
               const SizedBox(height: 40),
               const Text("© 2024 SISTEMA DE SEGUIMIENTO DE INVESTIGACIONES", style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
             ],
@@ -202,11 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- FORMULARIO COMÚN (AHORA CON LÓGICA) ---
+  // --- FORMULARIO COMÚN ---
   Widget _buildLoginForm({required bool isWeb}) {
-    // Envolvemos tu Column en un Form para la validación
     return Form(
-      key: _formKey,
+      key: _controller.formKey, // 👉 Conectado al controlador
       child: Column(
         crossAxisAlignment: isWeb ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
@@ -217,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
 
           _label("EMAIL INSTITUCIONAL"),
-          _inputField(Icons.email_outlined, "usuario@institucion.edu", _emailController, false),
+          _inputField(Icons.email_outlined, "usuario@institucion.edu", _controller.emailController, false),
           const SizedBox(height: 20),
 
           Row(
@@ -228,14 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
 
-          _inputField(Icons.lock_outline, "••••••••", _passwordController, true),
+          _inputField(Icons.lock_outline, "••••••••", _controller.passwordController, true),
 
           if (isWeb) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () {}, child: const Text("¿Olvidó su contraseña?"))),
           const SizedBox(height: 30),
 
-          // BOTÓN INICIAR SESIÓN ACTUALIZADO
+          // 👉 BOTÓN INICIAR SESIÓN CONECTADO AL CONTROLADOR
           ElevatedButton(
-            onPressed: _isLoading ? null : _iniciarSesion,
+            onPressed: _controller.isLoading ? null : _ejecutarLogin,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1046C4),
               minimumSize: const Size(double.infinity, 55),
@@ -243,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
               elevation: 2,
               disabledBackgroundColor: const Color(0xFF1046C4).withOpacity(0.6),
             ),
-            child: _isLoading
+            child: _controller.isLoading
                 ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                 : const Text("Iniciar Sesión", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
@@ -258,19 +221,19 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 25),
 
+          // 👉 BOTÓN DE GOOGLE CONECTADO AL CONTROLADOR
           OutlinedButton.icon(
-            // Si está cargando, desactivamos el botón
-            onPressed: _isLoading ? null : _continuarConGoogle,
-            icon: _isLoading
+            onPressed: _controller.isLoading ? null : _ejecutarGoogleLogin,
+            icon: _controller.isLoading
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : Image.network(
-                'https://tinyurl.com/google-logo-png-web',
-                height: 20,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.red)
+              'https://tinyurl.com/google-logo-png-web',
+              height: 20,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, color: Colors.red),
             ),
             label: Text(
-                _isLoading ? "Cargando..." : "Continuar con Google",
-                style: const TextStyle(color: Colors.black87)
+              _controller.isLoading ? "Cargando..." : "Continuar con Google",
+              style: const TextStyle(color: Colors.black87),
             ),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 55),
@@ -297,20 +260,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _label(String text) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1)));
 
-  // Hemos combinado tu inputField y passwordField en uno solo que usa TextFormField
   Widget _inputField(IconData icon, String hint, TextEditingController controller, bool isPassword) {
     return TextFormField(
       controller: controller,
-      obscureText: isPassword ? _isObscure : false,
+      obscureText: isPassword ? _controller.isObscure : false, // 👉 Conectado al controlador
       validator: (value) => value == null || value.isEmpty ? 'Este campo es requerido' : null,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, size: 20),
         suffixIcon: isPassword
-            ? IconButton(icon: Icon(_isObscure ? Icons.visibility : Icons.visibility_off, size: 20), onPressed: () => setState(() => _isObscure = !_isObscure))
+            ? IconButton(
+          icon: Icon(_controller.isObscure ? Icons.visibility : Icons.visibility_off, size: 20),
+          onPressed: _controller.toggleObscure, // 👉 Llama a la función del controlador
+        )
             : null,
         hintText: hint,
         filled: true,
-        fillColor: const Color(0xFFF5F7FF), //
+        fillColor: const Color(0xFFF5F7FF),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
       ),
     );

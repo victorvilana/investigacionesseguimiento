@@ -20,7 +20,7 @@ class CatalogoService {
     }
   }
 
-  // 👉 2. NUEVO MÉTODO para obtener niveles educativos
+  // 👉 2. MÉTODO para obtener niveles educativos
   Future<List<String>> obtenerNivelesEducativos() async {
     try {
       // Apuntamos a la colección 'niveleducativo'
@@ -41,7 +41,7 @@ class CatalogoService {
     }
   }
 
-  // 👉 3. NUEVO MÉTODO para obtener universidades
+  // 👉 3. MÉTODO para obtener universidades
   Future<List<String>> obtenerUniversidades() async {
     try {
       final snapshot = await _db.collection('universidades').get();
@@ -69,7 +69,49 @@ class CatalogoService {
     }
   }
 
+// 👉 4.  MÉTODO: Obtener lista de actividades desde Firebase
+  Future<List<String>> obtenerActividades() async {
+    try {
+      final snapshot = await _db.collection('actividades').get();
 
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+
+        // OJO: Usamos 'Actividad' con A mayúscula porque así está en tu base de datos
+        if (data.containsKey('Actividad')) {
+          List<String> listaActividades = (data['Actividad'] as List<dynamic>)
+              .map((e) => e.toString())
+              .toList();
+
+          // Las ordenamos alfabéticamente
+          listaActividades.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+          return listaActividades;
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error al obtener actividades: $e");
+      return [];
+    }
+  }
+
+  // 👉 5 MÉTODO: Traer la lista de quincenas
+  Future<List<String>> obtenerQuincenas() async {
+    try {
+      final snapshot = await _db.collection('quincena').limit(1).get();
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+        // Nota: Leemos 'quicena' por cómo está escrito en tu Firebase
+        final List<dynamic> lista = data['quicena'] ?? data['quincena'] ?? [];
+        return lista.map((e) => e.toString()).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Error al obtener quincenas: $e");
+      return [];
+    }
+  }
 
 }
 

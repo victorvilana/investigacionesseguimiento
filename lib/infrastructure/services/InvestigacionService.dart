@@ -70,7 +70,26 @@ class InvestigacionService {
     }
   }
 
+  // 👉 MÉTODO: Actualizar actividades
+  Future<void> actualizarActividadesProyecto(String id, List<Map<String, dynamic>> actividades) async {
+    try {
+      await _db.collection('investigaciones').doc(id).update({
+        'actividades': actividades,
+        'ultimaModificacion': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception("Error en el servicio de datos: $e");
+    }
+  }
 
+  // 👉 MÉTODO: Eliminar un proyecto por su ID
+  Future<void> eliminarInvestigacion(String id) async {
+    try {
+      await _db.collection('investigaciones').doc(id).delete();
+    } catch (e) {
+      throw Exception("Error al eliminar desde Firebase: $e");
+    }
+  }
 
 }
 

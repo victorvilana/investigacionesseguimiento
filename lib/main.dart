@@ -2,11 +2,11 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:investigacionesseguimiento/presentation/layouts/MainLayout.dart';
+//import 'package:investigacionesseguimiento/presentation/layouts/MainLayout.dart';
 //import 'package:investigacionesseguimiento/presentation/screens/DashboardScreen.dart';
 //import 'package:investigacionesseguimiento/presentation/screens/LoginScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:investigacionesseguimiento/presentation/screens/DashboardScreen.dart';
+//import 'package:investigacionesseguimiento/presentation/screens/DashboardScreen.dart';
 import 'package:investigacionesseguimiento/presentation/screens/LoginScreen.dart';
 import 'firebase_options.dart';
 
@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, fontFamily: 'Inter'),
-      home: const MainLayout(),
+      home: const LoginScreen(),
     );
   }
 }
