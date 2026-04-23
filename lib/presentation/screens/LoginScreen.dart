@@ -211,7 +211,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 : const Text("Iniciar Sesión", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
 
-          const SizedBox(height: 25),
+          const SizedBox(height: 30),
+
+          /*
           const Row(
             children: [
               Expanded(child: Divider()),
@@ -244,12 +246,14 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 30),
 
+          */
+
           Center(
             child: Text.rich(TextSpan(
               text: "¿Es nuevo en el sistema? ",
               style: const TextStyle(color: Colors.black54),
               children: [
-                TextSpan(text: "Cree una cuenta académica", style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold)),
+                TextSpan(text: "Pide información", style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold)),
               ],
             )),
           ),
