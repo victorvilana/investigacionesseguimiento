@@ -4,19 +4,24 @@ class CatalogoService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // 1. Método para obtener empresas
-  Future<List<String>> obtenerEmpresas() async {
+  Future<Map<String, List<String>>> obtenerEmpresasYSucursales() async {
     try {
       final snapshot = await _db.collection('empresas').get();
-      if (snapshot.docs.isNotEmpty) {
-        final data = snapshot.docs.first.data();
-        if (data.containsKey('empresa')) {
-          return (data['empresa'] as List<dynamic>).map((e) => e.toString()).toList();
+      Map<String, List<String>> mapa = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        String nombreEmpresa = doc.id; // Usa el ID del documento (ej. "AAA")
+        List<String> sucursales = [];
+
+        if (data.containsKey('Sucursal') && data['Sucursal'] != null) {
+          sucursales = List<String>.from(data['Sucursal']);
         }
+        mapa[nombreEmpresa] = sucursales;
       }
-      return [];
+      return mapa;
     } catch (e) {
-      print("Error al obtener empresas: $e");
-      return [];
+      throw Exception("Error al cargar empresas y sucursales: $e");
     }
   }
 

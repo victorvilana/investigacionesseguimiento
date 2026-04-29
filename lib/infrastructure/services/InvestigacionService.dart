@@ -13,6 +13,12 @@ class InvestigacionService {
     required String nivelEducativo,
     required int icono,
     required double valor,
+    // 👉 NUEVOS CAMPOS AGREGADOS AQUÍ
+    required String nombreProyecto,
+    required String cliente,
+    required String sucursal,
+    required DateTime fechaInicio,
+    required DateTime fechaFin,
   }) async {
     try {
       DateTime ahora = DateTime.now();
@@ -28,6 +34,12 @@ class InvestigacionService {
         'icono': icono,
         'valor': valor,
         'fechaRegistro': soloFecha,
+        // 👉 GUARDANDO LOS NUEVOS CAMPOS EN FIREBASE
+        'nombreProyecto': nombreProyecto,
+        'cliente': cliente,
+        'sucursal': sucursal,
+        'fechaInicio': fechaInicio,
+        'fechaFin': fechaFin,
       });
     } catch (e) {
       // Si hay error, lo lanzamos para que la pantalla lo atrape y muestre el mensaje
@@ -53,6 +65,12 @@ class InvestigacionService {
     required String nivelEducativo,
     required int icono,
     required double valor,
+    // 👉 NUEVOS CAMPOS AGREGADOS AQUÍ
+    required String nombreProyecto,
+    required String cliente,
+    required String sucursal,
+    required DateTime fechaInicio,
+    required DateTime fechaFin,
   }) async {
     try {
       // Usamos .update() para no sobreescribir la fechaRegistro original
@@ -64,6 +82,12 @@ class InvestigacionService {
         'niveleducativo': nivelEducativo,
         'icono': icono,
         'valor': valor,
+        // 👉 ACTUALIZANDO LOS NUEVOS CAMPOS EN FIREBASE
+        'nombreProyecto': nombreProyecto,
+        'cliente': cliente,
+        'sucursal': sucursal,
+        'fechaInicio': fechaInicio,
+        'fechaFin': fechaFin,
       });
     } catch (e) {
       throw Exception('No se pudo actualizar la investigación: $e');
@@ -90,7 +114,4 @@ class InvestigacionService {
       throw Exception("Error al eliminar desde Firebase: $e");
     }
   }
-
 }
-
-
