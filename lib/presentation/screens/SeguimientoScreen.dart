@@ -69,7 +69,7 @@ class SeguimientoScreen extends StatefulWidget {
       children: [
         _buildNavegacionSuperior(),
         const SizedBox(height: 24),
-        _buildInfoProyecto(), // 👉 La Tarjeta de Contexto que diseñamos
+        _buildInfoProyecto(isWeb: true), // 👉 PASAMOS LA VARIABLE isWeb
         const SizedBox(height: 32),
         _buildContenedorPrincipal(isWeb: true),
       ],
@@ -82,7 +82,7 @@ class SeguimientoScreen extends StatefulWidget {
       children: [
         _buildNavegacionSuperior(),
         const SizedBox(height: 16),
-        _buildInfoProyecto(), // 👉 La Tarjeta de Contexto que diseñamos
+        _buildInfoProyecto(isWeb: false), // 👉 PASAMOS LA VARIABLE isWeb
         const SizedBox(height: 32),
         _buildContenedorPrincipal(isWeb: false),
       ],
@@ -110,91 +110,111 @@ class SeguimientoScreen extends StatefulWidget {
   }
 
   // 👉 EL ENCABEZADO EXACTO DE ACTIVIDADES SCREEN
-  Widget _buildInfoProyecto() {
-    // Si tienes fechaRegistro en tu BD, úsala. Si no, usamos la fecha actual por ahora.
-    DateTime fecha = widget.proyecto['fechaRegistro'] != null
-        ? (widget.proyecto['fechaRegistro'] as dynamic).toDate()
-        : DateTime.now();
+  // 👉 AHORA RECIBE LA VARIABLE DIRECTAMENTE
+  Widget _buildInfoProyecto({required bool isWeb}) {
+    DateTime fecha = DateTime.now();
+    if (widget.proyecto['fechaInicio'] != null) {
+      fecha = (widget.proyecto['fechaInicio'] as dynamic).toDate();
+    } else if (widget.proyecto['fechaRegistro'] != null) {
+      fecha = (widget.proyecto['fechaRegistro'] as dynamic).toDate();
+    }
     String fechaFormateada = "${fecha.day}/${fecha.month}/${fecha.year}";
 
-    return Container(
-      padding: const EdgeInsets.all(24),
+    Widget columnaIzquierda = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.proyecto['titulo'] ?? 'Sin título',
+          style: TextStyle(
+              fontSize: isWeb ? 24 : 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1A1A1A),
+              height: 1.3
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: [
+            _chip("ID: ${widget.proyecto['id']}", isWeb: isWeb),
+            _chip("Empresa: ${widget.proyecto['empresacontratante'] ?? 'N/A'}", isGray: true, isWeb: isWeb),
+          ],
+        ),
+      ],
+    );
+
+    Widget contenedorFecha = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+        color: const Color(0xFF1046C4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "FECHA DE INICIO",
+            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          ),
+          const SizedBox(width: 16),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(fechaFormateada, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
-      child: Row(
+    );
+
+    return Container(
+      padding: EdgeInsets.all(isWeb ? 24 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: isWeb
+          ? Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.proyecto['titulo'] ?? 'Sin título',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), height: 1.3),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _chip("ID: ${widget.proyecto['id']}"),
-                    const SizedBox(width: 8),
-                    _chip("Empresa: ${widget.proyecto['empresacontratante'] ?? 'N/A'}", isGray: true),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: columnaIzquierda),
           const SizedBox(width: 32),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1046C4),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "FECHA DE INICIO",
-                  style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      fechaFormateada,
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          contenedorFecha,
+        ],
+      )
+          : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          columnaIzquierda,
+          const SizedBox(height: 24),
+          contenedorFecha,
         ],
       ),
     );
   }
 
-  Widget _chip(String label, {bool isGray = false}) {
+
+  Widget _chip(String label, {bool isGray = false, required bool isWeb}) {
     return Container(
+      // 👉 LÍMITE ESTRICTO: 220 píxeles máximo en celular
+      constraints: BoxConstraints(maxWidth: isWeb ? 400 : 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isGray ? Colors.grey.shade200 : const Color(0xFFEEF2FF),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+        overflow: TextOverflow.ellipsis, // Pone "..." si no cabe
+        maxLines: 1,
+      ),
     );
   }
+
 
   Widget _buildContenedorPrincipal({required bool isWeb}) {
     return Container(

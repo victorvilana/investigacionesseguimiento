@@ -112,10 +112,7 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
       children: [
         _buildNavegacionSuperior(),
         const SizedBox(height: 24),
-
-        // 👉 AHORA SOLO LLAMAMOS A LA TARJETA UNIFICADA
-        _buildInfoProyecto(),
-
+        _buildInfoProyecto(isWeb: true), // 👉 PASAMOS LA VARIABLE isWeb
         const SizedBox(height: 32),
         _buildContenedorPrincipal(isWeb: true),
       ],
@@ -126,25 +123,15 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "PROYECTO SELECCIONADO",
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1046C4),
-            letterSpacing: 1.0,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // 👉 USAMOS LA MISMA TARJETA HERMOSA PARA MÓVIL
-        _buildInfoProyecto(),
-
+        _buildNavegacionSuperior(),
+        const SizedBox(height: 16),
+        _buildInfoProyecto(isWeb: false), // 👉 PASAMOS LA VARIABLE isWeb
         const SizedBox(height: 32),
         _buildContenedorPrincipal(isWeb: false),
       ],
     );
   }
+
 
   // ==========================================
   // COMPONENTES DE SOPORTE
@@ -331,17 +318,28 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // 👉 SOLUCIÓN ERROR 3: Alinear al inicio por si el texto salta de línea
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "ACTIVIDAD",
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              // 👉 SOLUCIÓN ERROR 3: Expanded para que el texto ocupe el espacio disponible y no desborde
+              const Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 8.0), // Alinear con el icono
+                  child: Text(
+                    "ACTIVIDAD",
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
               IconButton(
                 onPressed: () => _controller.eliminarFila(index),
                 icon: const Icon(Icons.close, size: 18),
+                padding: EdgeInsets.zero, // Reducir padding interno del icono
+                constraints: const BoxConstraints(), // Evitar tamaño mínimo por defecto
               ),
             ],
           ),
+          const SizedBox(height: 8),
           _buildSelectorTipo(index),
           const SizedBox(height: 16),
           const Text(
@@ -357,6 +355,8 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
 
   Widget _buildSelectorTipo(int index) {
     return DropdownButtonFormField<String>(
+      // 👉 SOLUCIÓN ERROR OVERFLOW: Esta propiedad obliga al dropdown a respetar los márgenes de la pantalla
+      isExpanded: true,
       value: _controller.itemsActividad[index].tipo,
       decoration: _inputStyle(
         _cargandoCatalogos ? "Cargando..." : "Seleccione...",
@@ -364,14 +364,14 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
       items: _tiposActividad
           .map(
             (t) => DropdownMenuItem(
-              value: t,
-              child: Text(
-                t,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          )
+          value: t,
+          child: Text(
+            t,
+            overflow: TextOverflow.ellipsis, // Esto pone los "..." si el texto es muy largo
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+      )
           .toList(),
       onChanged: (val) => _controller.cambiarTipoActividad(index, val, context),
     );
@@ -547,105 +547,95 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
 
 
   // 👉 1. NUEVA TARJETA DE CONTEXTO UNIFICADA
-  Widget _buildInfoProyecto() {
-    DateTime fecha = (widget.proyecto['fechaRegistro'] as dynamic).toDate();
+  Widget _buildInfoProyecto({required bool isWeb}) {
+    DateTime fecha = DateTime.now();
+    if (widget.proyecto['fechaInicio'] != null) {
+      fecha = (widget.proyecto['fechaInicio'] as dynamic).toDate();
+    } else if (widget.proyecto['fechaRegistro'] != null) {
+      fecha = (widget.proyecto['fechaRegistro'] as dynamic).toDate();
+    }
     String fechaFormateada = "${fecha.day}/${fecha.month}/${fecha.year}";
 
-    return Container(
-      padding: const EdgeInsets.all(24),
+    Widget columnaIzquierda = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.proyecto['titulo'] ?? 'Sin título',
+          style: TextStyle(
+              fontSize: isWeb ? 24 : 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1A1A1A),
+              height: 1.3
+          ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: [
+            _chip("ID: ${widget.proyecto['id']}", isWeb: isWeb),
+            _chip("Empresa: ${widget.proyecto['empresacontratante'] ?? 'N/A'}", isGray: true, isWeb: isWeb),
+          ],
+        ),
+      ],
+    );
+
+    Widget contenedorFecha = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+        color: const Color(0xFF1046C4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "FECHA DE INICIO",
+            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          ),
+          const SizedBox(width: 16),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(fechaFormateada, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
-      child: Row(
+    );
+
+    return Container(
+      padding: EdgeInsets.all(isWeb ? 24 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: isWeb
+          ? Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Columna Izquierda: Título y Chips
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.proyecto['titulo'] ?? 'Sin título',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A1A),
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _chip("ID: ${widget.proyecto['id']}"),
-                    const SizedBox(width: 8),
-                    _chip("Empresa: ${widget.proyecto['empresacontratante']}", isGray: true),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
+          Expanded(child: columnaIzquierda),
           const SizedBox(width: 32),
-
-          // Columna Derecha: Cuadro Azul de Fecha
-          // 👉 Columna Derecha: Cuadro Azul de Fecha (AHORA CON ÍCONO)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1046C4),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "FECHA DE INICIO",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8), // Un poquito más de espacio para respirar
-                Row(
-                  children: [
-                    // 👉 Aquí agregamos el ícono del calendario
-                    const Icon(
-                      Icons.calendar_today_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      fechaFormateada,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          contenedorFecha,
+        ],
+      )
+          : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          columnaIzquierda,
+          const SizedBox(height: 24),
+          contenedorFecha,
         ],
       ),
     );
   }
 
-  // 👉 2. MANTENEMOS TU CHIP INTACTO
-  Widget _chip(String label, {bool isGray = false}) {
+  Widget _chip(String label, {bool isGray = false, required bool isWeb}) {
     return Container(
+      // 👉 LÍMITE ESTRICTO: 220 píxeles máximo en celular
+      constraints: BoxConstraints(maxWidth: isWeb ? 400 : 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isGray ? Colors.grey.shade200 : const Color(0xFFEEF2FF),
@@ -654,10 +644,11 @@ class _ActividadesScreenState extends State<ActividadesScreen> {
       child: Text(
         label,
         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+        overflow: TextOverflow.ellipsis, // Pone "..." si no cabe
+        maxLines: 1,
       ),
     );
   }
-
 
   Widget _buildBotonPlanificadoMobile() {
     return Container(
